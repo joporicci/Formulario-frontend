@@ -27,7 +27,9 @@ const LoginForm = () => {
 
   const onSubmit = async (data) => {
     try {
-      const response = await axiosInstance.post("/auth/login", data);
+      const response = await axiosInstance.post("/auth/login", data,{
+        withCredentials:true
+      });
 
       if (response.data) {
         router.push("/business-form");
