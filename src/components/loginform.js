@@ -30,12 +30,9 @@ const LoginForm = () => {
       const response = await axiosInstance.post("/auth/login", data);
 
       if (response.data) {
-        console.log("Usuario autenticado:", response.data);
         router.push("/business-form");
       }
     } catch (err) {
-      console.error("Error al iniciar sesión:", err.response?.data || err.message);
-
       if (err.response?.status === 400 || err.response?.status === 401) {
         const validationErrors = err.response.data.errors || [];
         validationErrors.forEach(({ field, message }) => {

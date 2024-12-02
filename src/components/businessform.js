@@ -2,7 +2,7 @@
 import { useForm } from 'react-hook-form';
 import axiosInstance from '../../api/axios';
 import { useRouter } from 'next/router';
-import styles from '../../styles/BusinessForm.module.css';
+import styles from "../../styles/Businessform.module.css";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 
