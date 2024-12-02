@@ -118,6 +118,7 @@ const BusinessForm = ()=> {
       // Enviar datos al backend
       await axiosInstance.post('/api/business', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        withCredentials:true
       });
       alert('Negocio registrado exitosamente');
       await axiosInstance.post('/auth/logout');
