@@ -121,7 +121,6 @@ const BusinessForm = ()=> {
         withCredentials:true
       });
       alert('Negocio registrado exitosamente');
-      await axiosInstance.post('/auth/logout');
       router.push('/');
     }catch (err) {
       if (err.response?.status === 400 || err.response?.status === 401) {
