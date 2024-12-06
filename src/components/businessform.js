@@ -1,128 +1,156 @@
-
 import { useForm } from 'react-hook-form';
-import axiosInstance from '../../api/axios';
 import { useRouter } from 'next/router';
+import axiosInstance from '../../api/axios.js';
 import styles from "../../styles/Businessform.module.css";
-import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
+import { formSchema } from '../../schema/formschema.js';
+import InputField from './InputField';
+import CheckBoxGroup from './CheckBoxGroup';
 
+// Mapeos de etiquetas a llaves internas
+const paymentMethodsMapping = {
+  "Efectivo": "efectivo",
+  "Transferencia": "transferencia",
+  "Tarjeta de crédito": "credito",
+  "Tarjeta de débito": "debito",
+  "Criptomonedas": "criptomonedas"
+};
 
-const schema = yup.object().shape({
-  category: yup
-    .string()
-    .min(3, "El Rubro debe tener al menos 3 caracteres.")
-    .max(50, "El Rubro no puede exceder 50 caracteres.")
-    .required("El campo 'Rubro' es obligatorio."),
-    
-  subcategory: yup
-    .string()
-    .min(3, "El Subrubro debe tener al menos 3 caracteres.")
-    .max(50, "El Subrubro no puede exceder 50 caracteres.")
-    .required("El campo 'Subrubro' es obligatorio."),
-    
-  description: yup
-    .string()
-    .min(10, "La descripción debe tener al menos 10 caracteres.")
-    .max(2500, "La descripción no puede exceder 2500 caracteres.")
-    .nullable(),
-    
-  phone: yup
-    .string()
-    .matches(
-      /^[0-9\s-]+$/,
-      "El teléfono sólo puede contener números, espacios y guiones."
-    )
-    .min(7, "El teléfono debe tener al menos 7 caracteres.")
-    .max(15, "El teléfono no puede exceder los 15 caracteres.")
-    .required("El campo Teléfono es obligatorio."),
-    
-  schedule: yup
-    .string()
-    .min(5, "El horario debe tener al menos 5 caracteres.")
-    .max(50, "El horario no puede exceder 50 caracteres.")
-    .required("El campo 'Horario' es obligatorio."),
+const generalMapping = {
+  "Atención bilingüe": "bilingual",
+  "Reservas online": "onlineBooking",
+  "Cancelación flexible": "cancelation",
+  "Atención las 24 horas": "attention",
+  "Servicio de emergencia": "emergency",
+  "Personal capacitado en primeros auxilios": "aids",
+  "Eventos y celebraciones privadas": "events",
+  "Espacios climatizados": "cspaces",
+  "Estacionamiento privado": "estprivate"
+};
 
-    city: yup
-    .string()
-    .min(2, "La localidad debe tener al menos 2 caracteres.")
-    .max(100, "La localidad no puede exceder 100 caracteres.")
-    .required("El campo 'Localidad' es obligatorio."),
-    
-  street: yup
-    .string()
-    .min(2, "La calle debe tener al menos 2 caracteres.")
-    .max(100, "La calle no puede exceder 100 caracteres.")
-    .required("El campo 'Calle' es obligatorio."),
-    
-  number: yup
-    .string()
-    .matches(/^[0-9]+$/, "El número sólo puede contener dígitos.")
-    .min(1, "El número debe tener al menos 1 dígito.")
-    .max(6, "El número no puede exceder 6 dígitos.")
-    .required("El campo 'Número' es obligatorio."),
-    
-  web: yup
-    .string()
-    .url("La URL de la página web debe ser válida (ejemplo: https://tusitio.com).")
-    .nullable(),
-    
-  instagram: yup
-    .string()
-    .url("La URL de Instagram debe ser válida (ejemplo: https://instagram.com/tunegocio).")
-    .nullable(),
-});
+const accessibilityMapping = {
+  "Rampas para silla de ruedas": "rampas",
+  "Baños adaptados": "abath",
+  "Asistencia para personas con movilidad reducida": "assistance"
+};
 
-const BusinessForm = ()=> {
-  const { register, handleSubmit,formState:{errors},setError } = useForm({
-    resolver:yupResolver(schema)
+const gastronomyMapping = {
+  "Menú para celíacos": "cmenu",
+  "Opciones veganas y vegetarianas": "vegetarian",
+  "Menú infantil": "infant",
+  "Delivery": "delivery",
+  "Takeaway": "takeaway",
+  "Carta de vinos": "wine",
+  "Cerveza artesanal": "beer",
+  "Espectáculos en vivo": "live",
+  "Música ambiental": "ambient",
+  "Menú en braille": "braile"
+};
+
+const connectivityMapping = {
+  "Wifi gratuito para clientes": "freewifi",
+  "Opciones de carga rápida": "fastcharge",
+  "Espacio de coworking": "coworkspace"
+};
+
+const additionalMapping = {
+  "Puntos de reciclaje": "recycling",
+  "Espacio pet friendly": "petfriendly"
+};
+
+// Arrays de opciones mostradas al usuario
+const paymentMethods = Object.keys(paymentMethodsMapping);
+const general = Object.keys(generalMapping);
+const accessibility = Object.keys(accessibilityMapping);
+const gastronomy = Object.keys(gastronomyMapping);
+const connectivity = Object.keys(connectivityMapping);
+const additional = Object.keys(additionalMapping);
+
+const BusinessForm = () => {
+  const { register, handleSubmit, formState: { errors }, setError } = useForm({
+    resolver: yupResolver(formSchema),
   });
+  
   const router = useRouter();
+
+  function createBooleanObject(mapping, formData) {
+    const result = {};
+    for (const label in mapping) {
+      const key = mapping[label];
+      // Si el checkbox no fue marcado, será undefined, lo forzamos a false
+      result[key] = !!formData[label];
+    }
+    return result;
+  }
+
   const onSubmit = async (data) => {
     try {
       const formData = new FormData();
-  
-      // Convertir booleanos a "Sí" o "No"
-      const booleanFields = ['accessibility', 'wifi', 'acceptsPets', 'parking'];
-      booleanFields.forEach((field) => {
-        data[field] = data[field] ? 'Sí' : 'No';
-      });
-  
-      // Agrupa los métodos de pago como "Sí" o "No"
-      const paymentMethods = {
-        efectivo: data.efectivo ? 'Sí' : 'No',
-        transferencia: data.transferencia ? 'Sí' : 'No',
-        credito: data.credito ? 'Sí' : 'No',
-        debito: data.debito ? 'Sí' : 'No',
-      };
-      formData.append('paymentMethods', JSON.stringify(paymentMethods));
-  
-      // Agrupa la ubicación en un objeto
+
+      // Crear objetos booleanos con las llaves internas
+      const paymentMethodsObj = createBooleanObject(paymentMethodsMapping, data);
+      const generalObj = createBooleanObject(generalMapping, data);
+      const accessibilityObj = createBooleanObject(accessibilityMapping, data);
+      const gastronomyObj = createBooleanObject(gastronomyMapping, data);
+      const connectivityObj = createBooleanObject(connectivityMapping, data);
+      const additionalObj = createBooleanObject(additionalMapping, data);
+
       const location = {
         city: data.city,
         street: data.street,
         number: data.number,
       };
+
       formData.append('location', JSON.stringify(location));
-  
-      // Agrega otros datos al FormData
+
+      // Eliminar las props originales
+      delete data.city;
+      delete data.street;
+      delete data.number;
+      delete data.coverPhoto;
+      delete data.gallery;
+
+      // Eliminar las props de checkboxes originales
+      paymentMethods.forEach(option => delete data[option]);
+      general.forEach(option => delete data[option]);
+      accessibility.forEach(option => delete data[option]);
+      gastronomy.forEach(option => delete data[option]);
+      connectivity.forEach(option => delete data[option]);
+      additional.forEach(option => delete data[option]);
+
+      // Agregar los nuevos objetos con llaves internas
+      formData.append('paymentMethods', JSON.stringify(paymentMethodsObj));
+      formData.append('general', JSON.stringify(generalObj));
+      formData.append('accessibility', JSON.stringify(accessibilityObj));
+      formData.append('gastronomy', JSON.stringify(gastronomyObj));
+      formData.append('connectivity', JSON.stringify(connectivityObj));
+      formData.append('additional', JSON.stringify(additionalObj));
+
+      // Agregar el resto de los campos (fantasyName, category, subcategory, etc.)
       Object.entries(data).forEach(([key, value]) => {
-        if (key === 'coverPhoto' || key === 'gallery') {
-          if (value instanceof FileList) {
-            Array.from(value).forEach((file) => formData.append(key, file));
-          }
-        } else if (!['efectivo', 'transferencia', 'credito', 'debito', 'city', 'street', 'number'].includes(key)) {
+        if (typeof value === "object" && value !== null) {
+          formData.append(key, JSON.stringify(value));
+        } else {
           formData.append(key, value);
         }
       });
-  
-      // Enviar datos al backend
+
+      if (data.coverPhoto) {
+        formData.append("coverPhoto", data.coverPhoto[0]);
+      }
+
+      if (data.gallery) {
+        Array.from(data.gallery).forEach((file) => formData.append("gallery", file));
+      }
+      
       await axiosInstance.post('/api/business', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        withCredentials:true
+        withCredentials: true,
       });
+
       alert('Negocio registrado exitosamente');
       router.push('/');
-    }catch (err) {
+    } catch (err) {
       if (err.response?.status === 400 || err.response?.status === 401) {
         const validationErrors = err.response.data.errors || [];
         validationErrors.forEach(({ field, message }) => {
@@ -134,174 +162,144 @@ const BusinessForm = ()=> {
       }
     }
   };
-  
-  
+
   return (
-    <div className={styles.formContainer}>
-      <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
-        <h1 className={styles.title}>Registrar Negocio</h1>
+    <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
+      <h1>Completá este formulario para crear tu landing page personalizada y destacar en nuestra plataforma</h1>
 
-        <label htmlFor="category" className={styles.label}>Rubro</label>
-        <input
-          {...register('category', { required: true })}
-          type="text"
-          id="category"
-          placeholder="Ej. Restaurante"
-          className={styles.input}
-        />
-        {errors.category && <p className={styles.error}>{errors.category.message}</p>}
+      <InputField 
+        label="Nombre de fantasía" 
+        id="fantasyName" 
+        register={register} 
+        error={errors.fantasyName} 
+        placeholder="Ejemplo: Hotel Sol de mar" 
+      />
 
-        <label htmlFor="subcategory" className={styles.label}>Subrubro</label>
-        <input
-          {...register('subcategory', { required: true })}
-          type="text"
-          id="subcategory"
-          placeholder="Ej. Comida rápida"
-          className={styles.input}
-        />
-        {errors.subcategory && <p className={styles.error}>{errors.subcategory.message}</p>}
+      <InputField 
+        label="Rubro principal" 
+        id="category" 
+        register={register} 
+        error={errors.category} 
+        placeholder="Ejemplo: Turismo, Gastronomía, Salud, Tecnología, etc." 
+      />
 
+      <InputField 
+        label="Subrubro" 
+        id="subcategory" 
+        register={register} 
+        error={errors.subcategory} 
+        placeholder="Ejemplo: Pizzería, Alquiler de sombrillas, Psicólogo, Electricista, etc." 
+      />
 
-        <label htmlFor="description" className={styles.label}>Descripción</label>
-        <textarea
-          {...register('description', { required: true })}
-          id="description"
-          placeholder="Describe tu negocio..."
-          className={styles.textarea}
-        ></textarea>
-        {errors.description && <p className={styles.error}>{errors.description.message}</p>}
-        
+      <InputField 
+        label="Descripción" 
+        id="description" 
+        register={register} 
+        error={errors.description} 
+        placeholder="Incluye qué ofreces, especialidades y diferenciadores." 
+      />
 
-        <fieldset className={styles.fieldset}>
-          <legend className={styles.legend}>Métodos de Pago</legend>
-          <div className={styles.checkboxGroup}>
-            <label className={styles.checkboxLabel}>
-              <input {...register('efectivo')} type="checkbox" /> Efectivo
-            </label>
-            <label className={styles.checkboxLabel}>
-              <input {...register('transferencia')} type="checkbox" /> Transferencia
-            </label>
-            <label className={styles.checkboxLabel}>
-              <input {...register('credito')} type="checkbox" /> Tarjeta de crédito
-            </label>
-            <label className={styles.checkboxLabel}>
-              <input {...register('debito')} type="checkbox" /> Tarjeta de débito
-            </label>
-          </div>
-        </fieldset>
+      <CheckBoxGroup 
+        legend="Métodos de Pago" 
+        options={paymentMethods.map((id) => ({ id, label: id }))} 
+        register={register} 
+      />
 
-        <fieldset className={styles.fieldset}>
-          <legend className={styles.legend}>Opciones</legend>
-          <div className={styles.checkboxGroup}>
-            <label className={styles.checkboxLabel}>
-              <input {...register('accessibility')} type="checkbox" /> Accesibilidad
-            </label>
-            <label className={styles.checkboxLabel}>
-              <input {...register('wifi')} type="checkbox" /> Wifi
-            </label>
-            <label className={styles.checkboxLabel}>
-              <input {...register('acceptsPets')} type="checkbox" /> Acepta Mascotas
-            </label>
-            <label className={styles.checkboxLabel}>
-              <input {...register('parking')} type="checkbox" /> Estacionamiento Disponible
-            </label>
-          </div>
-        </fieldset>
+      <CheckBoxGroup 
+        legend="General para todos los comercios" 
+        options={general.map((id) => ({ id, label: id }))}
+        register={register} 
+      />
 
-        <label htmlFor="coverPhoto" className={styles.label}>Foto de Portada</label>
-        <input
-          {...register('coverPhoto')}
-          type="file"
-          id="coverPhoto"
-          accept="image/*"
-          className={styles.fileInput}
-        />
+      <CheckBoxGroup 
+        legend="Accesibilidad" 
+        options={accessibility.map((id) => ({ id, label: id }))}
+        register={register} 
+      />
 
-        <label htmlFor="gallery" className={styles.label}>Galería de Imágenes</label>
-        <input
-          {...register('gallery')}
-          type="file"
-          id="gallery"
-          accept="image/*"
-          multiple
-          className={styles.fileInput}
-        />
+      <CheckBoxGroup 
+        legend="Rubro gastronómico" 
+        options={gastronomy.map((id) => ({ id, label: id }))}
+        register={register} 
+      />
 
-        <label htmlFor="schedule" className={styles.label}>Horarios Semanales</label>
-        <input
-          {...register('schedule', { required: true })}
-          type="text"
-          id="schedule"
-          placeholder="Ej. 9:00 AM - 9:00 PM"
-          className={styles.input}
-        />
-        {errors.schedule && <p className={styles.error}>{errors.schedule.message}</p>}
+      <CheckBoxGroup 
+        legend="Conectividad y tecnología" 
+        options={connectivity.map((id) => ({ id, label: id }))}
+        register={register} 
+      />
 
-        <label htmlFor="city" className={styles.label}>Localidad</label>
-        <input
-          {...register('city', { required: true })}
-          type="text"
-          id="city"
-          placeholder="Ciudad"
-          className={styles.input}
-        />
-        {errors.city && <p className={styles.error}>{errors.city.message}</p>}
+      <CheckBoxGroup 
+        legend="Adicionales" 
+        options={additional.map((id) => ({ id, label: id }))}
+        register={register} 
+      />
 
+      <label htmlFor="coverPhoto" className={styles.label}>Foto de Portada</label>
+      <input {...register("coverPhoto")} type="file" id="coverPhoto" accept="image/*" className={styles.fileInput} />
 
-        <label htmlFor="street" className={styles.label}>Calle</label>
-        <input
-          {...register('street', { required: true })}
-          type="text"
-          id="street"
-          placeholder="Calle"
-          className={styles.input}
-        />
-        {errors.street && <p className={styles.error}>{errors.street.message}</p>}
-        <label htmlFor="number" className={styles.label}>Número</label>
-        <input
-          {...register('number', { required: true })}
-          type="text"
-          id="number"
-          placeholder="Número"
-          className={styles.input}
-        />
-        {errors.number && <p className={styles.error}>{errors.number.message}</p>}
+      <label htmlFor="gallery" className={styles.label}>Galería de Imágenes</label>
+      <input {...register("gallery")} type="file" id="gallery" accept="image/*" multiple className={styles.fileInput} />
 
-        <label htmlFor="phone" className={styles.label}>Teléfono</label>
-        <input
-          {...register('phone', { required: true })}
-          type="text"
-          id="phone"
-          placeholder="Teléfono de contacto"
-          className={styles.input}
-        />
-        {errors.phone && <p className={styles.error}>{errors.phone.message}</p>}
-        <label htmlFor="web" className={styles.label}>Página web</label>
-        <input
-          {...register('web')}
-          type="text"
-          id="web"
-          placeholder="URL (opcional)"
-          className={styles.input}
-        />
-         {errors.web && <p className={styles.error}>{errors.web.message}</p>}
+      <InputField 
+        label="Horarios de apertura" 
+        id="schedule" 
+        register={register} 
+        error={errors.schedule} 
+        placeholder="Ejemplo: Lunes a Viernes de 8:00 am a 20:00 pm" 
+      />
 
-        <label htmlFor="instagram" className={styles.label}>Instagram</label>
-        <input
-          {...register('instagram')}
-          type="text"
-          id="instagram"
-          placeholder="URL (opcional)"
-          className={styles.input}
-        />
-         {errors.instagram && <p className={styles.error}>{errors.instagram.message}</p>}
+      <InputField 
+        label="Localidad" 
+        id="city" 
+        register={register} 
+        error={errors.city} 
+        placeholder="Ejemplo: Villa Gesell" 
+      />
 
-        <button type="submit" className={styles.button}>Registrar Negocio</button>
-      </form>
-    </div>
+      <InputField 
+        label="Calle" 
+        id="street" 
+        register={register} 
+        error={errors.street} 
+        placeholder="Ejemplo: Avenida 3" 
+      />
+
+      <InputField 
+        label="Número" 
+        id="number" 
+        register={register} 
+        error={errors.number} 
+        placeholder="Ejemplo: 398" 
+      />
+
+      <InputField 
+        label="Teléfono" 
+        id="phone" 
+        register={register} 
+        error={errors.phone} 
+        placeholder="Sólo dígitos" 
+      />
+
+      <InputField 
+        label="Página web" 
+        id="web" 
+        register={register} 
+        error={errors.web} 
+        placeholder="Opcional" 
+      />
+
+      <InputField 
+        label="Instagram" 
+        id="instagram" 
+        register={register} 
+        error={errors.instagram} 
+        placeholder="Opcional" 
+      />
+
+      <button type="submit" className={styles.button}>Registrar Negocio</button>
+    </form>
   );
-
 };
-
 
 export default BusinessForm;
