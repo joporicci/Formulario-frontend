@@ -1,4 +1,4 @@
-import BusinessForm from "@/components/BusinessForm"
+import BusinessForm from "@/components/businessform"
 
 
 export default function BusinessFormPage (){

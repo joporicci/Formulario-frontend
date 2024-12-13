@@ -107,8 +107,8 @@ const BusinessForm = () => {
       delete data.city;
       delete data.street;
       delete data.number;
-      delete data.coverPhoto;
-      delete data.gallery;
+      // delete data.coverPhoto;
+      // delete data.gallery;
 
       // Eliminar las props de checkboxes originales
       paymentMethods.forEach(option => delete data[option]);
