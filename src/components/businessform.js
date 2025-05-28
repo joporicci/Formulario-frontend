@@ -296,6 +296,14 @@ const BusinessForm = () => {
         error={errors.instagram} 
         placeholder="Opcional" 
       />
+      
+       <InputField 
+        label="Código de Referencia (opcional)" 
+        id="referenceCode" 
+        register={register} 
+        error={errors.referenceCode} 
+        placeholder="Ejemplo: ABC12" 
+      />
 
       <button type="submit" className={styles.button}>Registrar Negocio</button>
     </form>

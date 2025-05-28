@@ -1,6 +1,7 @@
 import * as yup from "yup";
 
 export const formSchema = yup.object().shape({
+ 
   fantasyName: yup
     .string()
     .min(3, "El Nombre de fantasía debe tener al menos 3 caracteres.")
@@ -67,4 +68,8 @@ export const formSchema = yup.object().shape({
     .string()
     .url("La URL de Instagram debe ser válida (ejemplo: https://instagram.com/tunegocio).")
     .nullable(),
+   referenceCode: yup
+  .string()
+  .notRequired()
+  .test('len', 'El código de referencia debe tener exactamente 5 caracteres', val => !val || val.length === 5),
 });
